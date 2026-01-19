@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'package:breath_state/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:breath_state/widgets/guided_breathing.dart';
 import 'package:breath_state/services/resonance_service/res_freq.dart';
@@ -37,7 +38,6 @@ class _ResonanceFrequencyTrainerState extends State<ResonanceFrequencyTrainer> {
 
   void _startTest() {
     setState(() => _isRunning = true);
-
     _runStep(); 
   }
 
@@ -94,113 +94,103 @@ class _ResonanceFrequencyTrainerState extends State<ResonanceFrequencyTrainer> {
     final exhaleMs = inhaleMs;
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 53, 53, 53),
-      appBar: AppBar(
-        title: const Text(
-          "Resonance Frequency Test",
-          style: TextStyle(color: Colors.white), 
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+             begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppTheme.deepOceanBlue,
+              AppTheme.midnightBlue,
+            ],
+          ),
         ),
-        backgroundColor: const Color.fromARGB(255, 53, 53, 53),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: Center(
-        child:
-            _isRunning
-                ? Column(
-                  // mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Testing rate: $_currentRate BPM",
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        foreground:
-                            Paint()
-                              ..shader = const LinearGradient(
-                                colors: <Color>[
-                                  Colors.lightBlueAccent,
-                                  Colors.cyanAccent,
-                                ],
-                              ).createShader(
-                                const Rect.fromLTWH(0.0, 0.0, 200.0, 70.0),
+        child: SafeArea(
+          child: Column(
+            children: [
+              AppBar(
+                title: const Text("Resonance Frequency Test"),
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                centerTitle: true,
+              ),
+              Expanded(
+                child: Center(
+                  child: _isRunning
+                      ? Column(
+                          children: [
+                            const SizedBox(height: 20),
+                            Text(
+                              "Testing rate",
+                              style: Theme.of(context).textTheme.labelLarge,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              "$_currentRate BPM",
+                              style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                                color: AppTheme.calmBlue,
                               ),
-                        shadows: [
-                          Shadow(
-                            blurRadius: 8.0,
-                            color: Colors.black.withOpacity(0.6),
-                            offset: const Offset(2, 2),
-                          ),
-                        ],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-
-                    const SizedBox(height: 20),
-                    Expanded(
-                      child: GuidedBreathing(
-                        inhaleDuration: Duration(milliseconds: inhaleMs),
-                        holdDuration: Duration.zero,
-                        exhaleDuration: Duration(milliseconds: exhaleMs),
-                        showStopButton: false,
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-                  ],
-                )
-                : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.check_circle,
-                      color: Colors.greenAccent,
-                      size: 80,
-                    ),
-                    const SizedBox(height: 20),
-                    ShaderMask(
-                      shaderCallback:
-                          (bounds) => const LinearGradient(
-                            colors: [Colors.lightBlueAccent, Colors.cyanAccent],
-                          ).createShader(bounds),
-                      child: const Text(
-                        "Test Completed!",
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                            ),
+                            const SizedBox(height: 40),
+                            Expanded(
+                              child: GuidedBreathing(
+                                inhaleDuration: Duration(milliseconds: inhaleMs),
+                                holdDuration: Duration.zero,
+                                exhaleDuration: Duration(milliseconds: exhaleMs),
+                                showStopButton: false,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                               padding: const EdgeInsets.all(24),
+                               decoration: BoxDecoration(
+                                 color: AppTheme.softTeal.withOpacity(0.1),
+                                 shape: BoxShape.circle,
+                               ),
+                               child: const Icon(
+                                Icons.check_circle_outline_rounded,
+                                color: AppTheme.softTeal,
+                                size: 80,
+                              ),
+                            ),
+                            const SizedBox(height: 30),
+                            Text(
+                              "Test Completed!",
+                              style: Theme.of(context).textTheme.displayMedium,
+                            ),
+                            const SizedBox(height: 40),
+                            Text(
+                              "Best Rate",
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              "${widget.rf.getResonanceBreathingRate()} BPM",
+                              style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                                fontSize: 56,
+                                color: AppTheme.softTeal,
+                              ),
+                            ),
+                            const SizedBox(height: 60),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+                              ),
+                              child: const Text("Done"),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 30),
-                    Text(
-                      "Best Rate",
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[300],
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    Text(
-                      "${widget.rf.getResonanceBreathingRate()} BPM",
-                      style: const TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.cyanAccent,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 12.0,
-                            color: Colors.black54,
-                            offset: Offset(3, 3),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -8,9 +8,16 @@ import 'widgets/bottom_nav_bar.dart';
 import 'screens/home_screen.dart';
 import 'screens/guided_breathing_screen.dart';
 
-//TODO: Make all the sizes defined be wrt to context size
+import 'package:breath_state/theme/app_theme.dart';
+
+import 'package:flutter/services.dart';
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    systemNavigationBarColor: Colors.transparent,
+  ));
   runApp(
     MultiProvider(
       providers: [
@@ -40,10 +47,13 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'BreathState',
       debugShowCheckedModeBanner: false,
+      theme: AppTheme.darkTheme,
       home: Consumer<NavBarProvider>(
         builder: (context, model, child) {
           return Scaffold(
+            extendBody: true, 
             body: screens[model.getIndex()],
             bottomNavigationBar: const BottomNavBar(),
           );

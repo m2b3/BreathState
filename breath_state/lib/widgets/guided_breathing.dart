@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:breath_state/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
 class GuidedBreathing extends StatefulWidget {
@@ -30,7 +31,7 @@ class _GuidedBreathingState extends State<GuidedBreathing>
 
   String _phaseText = "Relax...";
   double minSize = 100;
-  double maxSize = 200;
+  double maxSize = 220;
 
   int _introSecondsLeft = 5;
   int _phaseSecondsLeft = 0;
@@ -44,10 +45,10 @@ class _GuidedBreathingState extends State<GuidedBreathing>
       duration: widget.inhaleDuration,
     );
 
-    _animation = Tween<double>(
-      begin: minSize,
-      end: maxSize,
-    ).animate(_controller);
+    _animation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOutSine,
+    );
 
     _introTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_introSecondsLeft == 1) {
@@ -63,10 +64,12 @@ class _GuidedBreathingState extends State<GuidedBreathing>
   void _startCycle() => _doInhale();
 
   void _doInhale() {
+    if (!mounted) return;
     setState(() => _phaseText = "Inhale");
     _controller.duration = widget.inhaleDuration;
     _startCountdown(widget.inhaleDuration);
     _controller.forward().whenComplete(() {
+      if (!mounted) return;
       if (widget.holdDuration == Duration.zero) {
         _doExhale();
         return;
@@ -76,10 +79,12 @@ class _GuidedBreathingState extends State<GuidedBreathing>
   }
 
   void _doExhale() {
+    if (!mounted) return;
     setState(() => _phaseText = "Exhale");
     _controller.duration = widget.exhaleDuration;
     _startCountdown(widget.exhaleDuration);
     _controller.reverse().whenComplete(() {
+      if (!mounted) return;
       if (widget.holdDuration == Duration.zero) {
         _doInhale();
         return;
@@ -89,9 +94,11 @@ class _GuidedBreathingState extends State<GuidedBreathing>
   }
 
   void _doHold({required bool afterInhale}) {
+    if (!mounted) return;
     setState(() => _phaseText = "Hold");
     _startCountdown(widget.holdDuration);
     _phaseTimer = Timer(widget.holdDuration, () {
+      if (!mounted) return;
       if (afterInhale) {
         _doExhale();
       } else {
@@ -130,116 +137,114 @@ class _GuidedBreathingState extends State<GuidedBreathing>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0D0D),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  width: maxSize + 60,
-                  height: maxSize + 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const RadialGradient(
-                      colors: [
-                        Color(0xFF1E293B),
-                        Color(0xFF0F172A),
-                      ],
-                    ),
-                    border: Border.all(
-                      color: Colors.tealAccent.withOpacity(0.4),
-                      width: 2.5,
-                    ),
-                  ),
-                ),
-
-
-                AnimatedBuilder(
-                  animation: _animation,
-                  builder: (context, child) {
-                    return Container(
-                      width: _animation.value,
-                      height: _animation.value,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const RadialGradient(
-                          colors: [
-                            Color(0xFF06B6D4),
-                            Color(0xFF0EA5E9),
-                          ],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.cyanAccent.withOpacity(0.6),
-                            blurRadius: 35,
-                            spreadRadius: 10,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppTheme.deepOceanBlue,
+              AppTheme.midnightBlue,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(flex: 2),
+              Center(
+                child: SizedBox(
+                   width: maxSize + 100,
+                   height: maxSize + 100,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                       // Outer glow
+                      Container(
+                        width: maxSize + 60,
+                        height: maxSize + 60,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppTheme.softTeal.withOpacity(0.1),
+                            width: 2,
                           ),
-                        ],
+                        ),
                       ),
-                      child: Center(
-                        child:
-                            _introSecondsLeft > 0
-                                ? const SizedBox.shrink()
-                                : AnimatedOpacity(
-                                  opacity: _phaseSecondsLeft == 1 ? 0.0 : 1.0,
-                                  duration: const Duration(milliseconds: 600),
-                                  child: Text(
-                                    '$_phaseSecondsLeft',
-                                    style: const TextStyle(
-                                      fontSize: 44,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
+                      
+                      AnimatedBuilder(
+                        animation: _animation,
+                        builder: (context, child) {
+                          final currentSize = minSize + (maxSize - minSize) * _animation.value;
+                          return Container(
+                            width: currentSize,
+                            height: currentSize,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  AppTheme.softTeal.withOpacity(0.8),
+                                  AppTheme.calmBlue.withOpacity(0.4),
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.softTeal.withOpacity(0.4),
+                                  blurRadius: 30 + (20 * _animation.value),
+                                  spreadRadius: 5 + (10 * _animation.value),
                                 ),
+                              ],
+                            ),
+                            child: Center(
+                              child: _introSecondsLeft > 0
+                                  ? const SizedBox.shrink()
+                                  : AnimatedOpacity(
+                                      opacity: _phaseSecondsLeft <= 3 ? 0.3 : 1.0, 
+                                       duration: const Duration(milliseconds: 300),
+                                      child: Text(
+                                        '$_phaseSecondsLeft',
+                                        style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                                          fontSize: 48,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 60),
-
-            Text(
-              _introSecondsLeft > 0
-                  ? "Relax... $_introSecondsLeft"
-                  : _phaseText,
-              style: const TextStyle(
-                fontSize: 34,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 1.2,
-              ),
-            ),
-
-            if (widget.showStopButton) const SizedBox(height: 100),
-
-            if (widget.showStopButton)
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 50,
-                    vertical: 16,
+                    ],
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(32),
-                  ),
-                  elevation: 6,
-                  shadowColor: Colors.redAccent.withOpacity(0.5),
-                ),
-                child: const Text(
-                  "Stop",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ),
-          ],
+
+              const SizedBox(height: 60),
+
+              Text(
+                _introSecondsLeft > 0
+                    ? "Relax... $_introSecondsLeft"
+                    : _phaseText,
+                style: Theme.of(context).textTheme.displayMedium,
+              ),
+
+              const Spacer(flex: 2),
+
+              if (widget.showStopButton)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 40),
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white.withOpacity(0.1),
+                      foregroundColor: Colors.white,
+                      side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                    ),
+                    child: const Text("End Session"),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
