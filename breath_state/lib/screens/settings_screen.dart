@@ -1,5 +1,6 @@
 import 'package:breath_state/constants/file_constants.dart';
 import 'package:breath_state/providers/polar_connect_provider.dart';
+import 'package:breath_state/providers/theme_provider.dart';
 import 'package:breath_state/services/ble_service/ble_scanning.dart';
 import 'package:breath_state/services/file_service/file_write.dart';
 import 'package:breath_state/theme/app_theme.dart';
@@ -23,157 +24,213 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.deepOceanBlue,
-              AppTheme.midnightBlue,
-            ],
-          ),
+        decoration: BoxDecoration(
+          gradient: isDark
+              ? AppTheme.darkBackgroundGradient
+              : AppTheme.lightBackgroundGradient,
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 10),
-                Center(
-                  child: Text(
-                    "Settings",
-                    style: Theme.of(context).textTheme.displayMedium,
-                  ),
-                ),
-                const SizedBox(height: 40),
-
-                GlassCard(
+          bottom: false,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.blueAccent.withOpacity(0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.bluetooth,
-                              size: 24,
-                              color: Colors.blueAccent,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                      const SizedBox(height: 10),
+                      Center(
+                        child: Text(
+                          "Settings",
+                          style: Theme.of(context).textTheme.displayMedium,
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+
+                      GlassCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                Text(
-                                  "Polar Sensor",
-                                  style: Theme.of(context).textTheme.labelLarge,
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.softTeal.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.palette_rounded,
+                                    size: 24,
+                                    color: AppTheme.softTeal,
+                                  ),
                                 ),
-                                Text(
-                                  _isConnected ? "Connected" : "Disconnected",
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: _isConnected ? Colors.greenAccent : Colors.redAccent,
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Text(
+                                    "Appearance",
+                                    style: Theme.of(context).textTheme.labelLarge,
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 16),
+                            Consumer<ThemeProvider>(
+                              builder: (context, themeProvider, child) {
+                                return SwitchListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: Text(
+                                    "Dark Mode",
+                                    style: Theme.of(context).textTheme.bodyLarge,
+                                  ),
+                                  value: themeProvider.isDarkMode,
+                                  activeColor: AppTheme.softTeal,
+                                  onChanged: (val) {
+                                    themeProvider.toggleTheme(val);
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            await BleScanning.requestPermissions();
-                            await BleScanning.checkAndRequestBluetooth(context);
-                            await BleScanning.checkAndRequestLocation(context);
-                            _selectDeviceUUID = await Navigator.push<String>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const BleDeviceSelect(),
+
+                      const SizedBox(height: 24),
+
+                      GlassCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blueAccent.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.bluetooth,
+                                    size: 24,
+                                    color: Colors.blueAccent,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "Polar Sensor",
+                                        style: Theme.of(context).textTheme.labelLarge,
+                                      ),
+                                      Text(
+                                        _isConnected ? "Connected" : "Disconnected",
+                                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          color: _isConnected ? Colors.greenAccent : AppTheme.roseAccent,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  await BleScanning.requestPermissions();
+                                  await BleScanning.checkAndRequestBluetooth(context);
+                                  await BleScanning.checkAndRequestLocation(context);
+                                  _selectDeviceUUID = await Navigator.push<String>(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const BleDeviceSelect(),
+                                    ),
+                                  );
+                                  developer.log(
+                                    "Selected Device UUID: $_selectDeviceUUID",
+                                  );
+                                  if (_selectDeviceUUID != null) {
+                                    setState(() => _isConnected = true);
+                                    await context
+                                        .read<PolarConnectProvider>()
+                                        .connectToPolarSensor(_selectDeviceUUID!);
+                                  }
+                                },
+                                child: Text(_isConnected ? "Reconnect" : "Connect Device"),
                               ),
-                            );
-                            developer.log(
-                              "Selected Device UUID: $_selectDeviceUUID",
-                            );
-                            if (_selectDeviceUUID != null) {
-                              setState(() => _isConnected = true);
-                              await context
-                                  .read<PolarConnectProvider>()
-                                  .connectToPolarSensor(_selectDeviceUUID!);
-                            }
-                          },
-                          child: Text(_isConnected ? "Reconnect" : "Connect Device"),
+                            ),
+                            if (_selectDeviceUUID != null) ...[
+                              const SizedBox(height: 12),
+                              Center(
+                                child: Text(
+                                  "Device ID: $_selectDeviceUUID",
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
-                      if (_selectDeviceUUID != null) ...[
-                        const SizedBox(height: 12),
-                        Center(
-                          child: Text(
-                            "Device ID: $_selectDeviceUUID",
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
-                          ),
+
+                      const SizedBox(height: 24),
+
+                      GlassCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                 Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.softTeal.withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.download_rounded,
+                                    size: 24,
+                                    color: AppTheme.softTeal,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Text(
+                                  "Export Data",
+                                  style: Theme.of(context).textTheme.labelLarge,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () async {
+                                  _showExportDialog(context);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.softTeal,
+                                  foregroundColor: AppTheme.deepOceanBlue,
+                                ),
+                                child: const Text("Export CSV"),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
+                      const SizedBox(height: 100),
                     ],
                   ),
                 ),
-
-                const SizedBox(height: 24),
-
-                GlassCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                           Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppTheme.softTeal.withOpacity(0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.download_rounded,
-                              size: 24,
-                              color: AppTheme.softTeal,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Text(
-                            "Export Data",
-                            style: Theme.of(context).textTheme.labelLarge,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            _showExportDialog(context);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.softTeal,
-                            foregroundColor: AppTheme.deepOceanBlue,
-                          ),
-                          child: const Text("Export CSV"),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),
@@ -184,7 +241,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.midnightBlue,
+        backgroundColor: Theme.of(context).cardTheme.color,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text("Export Data", style: Theme.of(context).textTheme.titleLarge),
         content: Column(
@@ -231,6 +288,10 @@ class _ExportOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05);
+    final bgColor = isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.02);
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -238,9 +299,9 @@ class _ExportOption extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: bgColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: borderColor),
         ),
         child: Text(
           label,

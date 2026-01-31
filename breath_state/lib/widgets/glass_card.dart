@@ -25,6 +25,26 @@ class GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final effectiveBorderColor = isDark 
+        ? Colors.white.withOpacity(0.15)
+        : Colors.black.withOpacity(0.08);
+
+    final effectiveGradientStart = isDark 
+        ? (color ?? Colors.white).withOpacity(0.14)
+        : (color ?? Colors.white).withOpacity(0.65);
+
+    final effectiveGradientEnd = isDark 
+        ? (color ?? Colors.white).withOpacity(0.06)
+        : (color ?? Colors.white).withOpacity(0.35);
+
+    final bgOpacity = isDark ? 0.10 : 0.45;
+
+    final shadowColor = isDark 
+        ? Colors.black.withOpacity(0.3)
+        : Colors.black.withOpacity(0.08);
+
     return Container(
       width: width,
       height: height,
@@ -33,25 +53,32 @@ class GlassCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            spreadRadius: -2,
+            color: shadowColor,
+            blurRadius: 24,
+            spreadRadius: -4,
             offset: const Offset(0, 8),
           ),
+          if (!isDark)
+            BoxShadow(
+              color: Colors.white.withOpacity(0.8),
+              blurRadius: 12,
+              spreadRadius: -4,
+              offset: const Offset(0, -4),
+            ),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
           child: Container(
             padding: padding ?? const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: (color ?? Colors.white).withOpacity(0.08),
+              color: (color ?? Colors.white).withOpacity(bgOpacity),
               borderRadius: BorderRadius.circular(borderRadius),
               border: hasBorder
                   ? Border.all(
-                      color: Colors.white.withOpacity(0.12),
+                      color: effectiveBorderColor,
                       width: 1.0,
                     )
                   : null,
@@ -59,8 +86,8 @@ class GlassCard extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  (color ?? Colors.white).withOpacity(0.12),
-                  (color ?? Colors.white).withOpacity(0.04),
+                  effectiveGradientStart,
+                  effectiveGradientEnd,
                 ],
               ),
             ),

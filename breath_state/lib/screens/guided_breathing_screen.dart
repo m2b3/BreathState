@@ -15,7 +15,7 @@ class GuidedBreathingScreen extends StatelessWidget {
       _BreathingOption(
         title: "Box Breathing",
         description: "Inhale • Hold • Exhale • Hold",
-        color: const Color(0xFF60A5FA), 
+        color: AppTheme.softTeal, 
         icon: Icons.crop_square_rounded,
         inhale: 4,
         hold: 4,
@@ -24,7 +24,7 @@ class GuidedBreathingScreen extends StatelessWidget {
       _BreathingOption(
         title: "Equal Breathing",
         description: "Balanced inhale and exhale",
-        color: const Color(0xFF34D399), 
+        color: AppTheme.calmBlue, 
         icon: Icons.waves_rounded,
         inhale: 4,
         hold: 0,
@@ -33,7 +33,7 @@ class GuidedBreathingScreen extends StatelessWidget {
       _BreathingOption(
         title: "4-7-8 Breathing",
         description: "Relaxation and calmness",
-        color: const Color(0xFFA78BFA), 
+        color: const Color(0xFF818CF8), 
         icon: Icons.nightlight_round,
         inhale: 4,
         hold: 7,
@@ -42,7 +42,7 @@ class GuidedBreathingScreen extends StatelessWidget {
       _BreathingOption(
         title: "Resonance Frequency",
         description: "Your personalized breathing rate",
-        color: const Color(0xFFF472B6), 
+        color: AppTheme.roseAccent, 
         icon: Icons.favorite_rounded,
         inhale: 0,
         hold: 0,
@@ -50,57 +50,65 @@ class GuidedBreathingScreen extends StatelessWidget {
       ),
     ];
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.mainBackgroundGradient,
+        decoration: BoxDecoration(
+          gradient: isDark 
+              ? AppTheme.darkBackgroundGradient 
+              : AppTheme.lightBackgroundGradient,
         ),
         child: SafeArea(
           bottom: false,
-          child: CustomScrollView(
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.all(24.0),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 20),
-                      Text(
-                        "Guided Sessions",
-                        style: Theme.of(context).textTheme.displayLarge,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return CustomScrollView(
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 16.0),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 20),
+                          Text(
+                            "Guided Sessions",
+                            style: Theme.of(context).textTheme.displayLarge,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            "Select a pattern to begin",
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: Theme.of(context).textTheme.bodyMedium?.color,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Select a pattern to begin",
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppTheme.textDim,
-                        ),
+                    ),
+                  ),
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    sliver: SliverGrid(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                        childAspectRatio: 0.88,
                       ),
-                    ],
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final option = breathingOptions[index];
+                          return _BreathingCard(option: option, index: index);
+                        },
+                        childCount: breathingOptions.length,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 20,
-                    crossAxisSpacing: 20,
-                    childAspectRatio: 0.85,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final option = breathingOptions[index];
-                      return _BreathingCard(option: option, index: index);
-                    },
-                    childCount: breathingOptions.length,
-                  ),
-                ),
-              ),
-              const SliverToBoxAdapter(child: SizedBox(height: 100)),
-            ],
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -136,6 +144,11 @@ class _BreathingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBgOpacity = isDark ? 0.18 : 0.7;
+    final iconBgOpacity = isDark ? 0.25 : 0.15;
+    final shadowOpacity = isDark ? 0.3 : 0.2;
+
     return GestureDetector(
       onTap: () {
         if (index == 3) {
@@ -144,7 +157,7 @@ class _BreathingCard extends StatelessWidget {
             showDialog(
               context: context,
               builder: (ctx) => AlertDialog(
-                backgroundColor: AppTheme.midnightBlue,
+                backgroundColor: Theme.of(context).cardTheme.color,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 title: Text("Resonance Frequency Needed", style: Theme.of(context).textTheme.titleLarge),
                 content: Text(
@@ -155,7 +168,7 @@ class _BreathingCard extends StatelessWidget {
                   TextButton(
                     onPressed: () {
                       Navigator.of(context).pop();
-                      context.read<NavBarProvider>().changeIndex(2); // Go to Record/Measure
+                      context.read<NavBarProvider>().changeIndex(2);
                     },
                     child: Text("Go to Measure", style: TextStyle(color: AppTheme.softTeal)),
                   ),
@@ -189,50 +202,55 @@ class _BreathingCard extends StatelessWidget {
         }
       },
       child: GlassCard(
-        padding: const EdgeInsets.all(20),
-        borderRadius: 32,
-        color: option.color.withOpacity(0.15),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        borderRadius: 28,
+        color: option.color.withOpacity(cardBgOpacity),
         hasBorder: true,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const Spacer(flex: 1),
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: option.color.withOpacity(0.2),
+                color: option.color.withOpacity(iconBgOpacity),
                 shape: BoxShape.circle,
                 boxShadow: [
                    BoxShadow(
-                    color: option.color.withOpacity(0.2),
-                    blurRadius: 12,
+                    color: option.color.withOpacity(shadowOpacity),
+                    blurRadius: 16,
+                    spreadRadius: 2,
                     offset: const Offset(0, 4),
                    ),
                 ]
               ),
-              child: Icon(option.icon, size: 36, color: option.color),
+              child: Icon(option.icon, size: 32, color: option.color),
             ),
-            const Spacer(),
+            const Spacer(flex: 2),
             Text(
               option.title,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                height: 1.2,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               option.description,
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 12, 
-                color: AppTheme.textDim,
-                height: 1.2,
+                fontSize: 11,
+                color: isDark 
+                    ? Colors.white.withOpacity(0.6)
+                    : Colors.black.withOpacity(0.55),
+                height: 1.3,
               ),
             ),
-            const Spacer(),
+            const Spacer(flex: 1),
           ],
         ),
       ),

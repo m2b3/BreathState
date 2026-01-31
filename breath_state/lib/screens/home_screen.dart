@@ -29,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final dbService = DatabaseService.instance;
       List<Map> breathData = [];
       List<Map> heartData = [];
-      
+
       try {
         breathData = await dbService.getData(BREATH_TABLE_NAME);
         heartData = await dbService.getData(HEART_TABLE_NAME);
@@ -63,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<FlSpot> _mapToSpots(List<Map> rows) {
     if (rows.isEmpty) return [];
     final recentRows = rows.length > 20 ? rows.sublist(rows.length - 20) : rows;
-    
+
     return recentRows.asMap().entries.map((entry) {
       final i = entry.key.toDouble();
       final rate = double.tryParse(entry.value['rate'].toString()) ?? 0.0;
@@ -79,6 +79,8 @@ class _HomeScreenState extends State<HomeScreen> {
       final lastVal = spots.last.y;
       displayValue = lastVal.toStringAsFixed(1);
     }
+    
+    final labelColor = Theme.of(context).textTheme.bodyMedium?.color ?? Colors.grey;
 
     return GlassCard(
       margin: const EdgeInsets.only(bottom: 24),
@@ -103,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         title,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: AppTheme.textDim,
+                              color: labelColor,
                             ),
                       ),
                     ],
@@ -116,16 +118,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         displayValue,
                         style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                          color: color,
-                          fontWeight: FontWeight.bold,
-                        ),
+                              color: color,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
                       const SizedBox(width: 4),
                       Text(
                         unit,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                     ],
                   ),
@@ -151,8 +153,8 @@ class _HomeScreenState extends State<HomeScreen> {
             child: hasData
                 ? LineChart(
                     LineChartData(
-                      gridData: FlGridData(show: false),
-                      titlesData: FlTitlesData(show: false),
+                      gridData: const FlGridData(show: false),
+                      titlesData: const FlTitlesData(show: false),
                       borderData: FlBorderData(show: false),
                       minX: 0,
                       maxX: (spots.length - 1).toDouble(),
@@ -173,11 +175,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 radius: 4,
                                 color: color,
                                 strokeWidth: 2,
-                                strokeColor: Colors.white,
+                                strokeColor: Theme.of(context).scaffoldBackgroundColor,
                               );
                             },
                             checkToShowDot: (spot, barData) {
-                              return spot.x == barData.spots.last.x; // Only show last dot
+                              return spot.x == barData.spots.last.x; 
                             },
                           ),
                           belowBarData: BarAreaData(
@@ -195,14 +197,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                       lineTouchData: LineTouchData(
                         touchTooltipData: LineTouchTooltipData(
-                          getTooltipColor: (touchedSpot) => AppTheme.midnightBlue.withOpacity(0.8),
+                          getTooltipColor: (touchedSpot) => Theme.of(context).cardColor,
                           getTooltipItems: (touchedSpots) {
                             return touchedSpots.map((spot) {
                               return LineTooltipItem(
                                 '${spot.y.toStringAsFixed(1)} $unit',
-                                const TextStyle(
-                                  color: Colors.white, 
-                                  fontWeight: FontWeight.bold
+                                TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               );
                             }).toList();
@@ -219,8 +221,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         "Record data to generate summary graphs",
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.white30,
-                        ),
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                            ),
                       ),
                     ),
                   ),
@@ -232,10 +234,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: AppTheme.mainBackgroundGradient,
+        decoration: BoxDecoration(
+          gradient: isDark 
+              ? AppTheme.darkBackgroundGradient 
+              : AppTheme.lightBackgroundGradient,
         ),
         child: SafeArea(
           bottom: false,
@@ -253,13 +259,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             Text(
                               _getGreeting(),
                               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: AppTheme.textDim,
+                                    color: Theme.of(context).textTheme.bodyMedium?.color, 
                                     fontSize: 18,
                                   ),
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              "Welcome Back",
+                              "Welcome!",
                               style: Theme.of(context).textTheme.displayLarge,
                             ),
                             const SizedBox(height: 40),
@@ -280,10 +286,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           _buildChartCard(
                             heartRows,
                             "Heart Rate",
-                            AppTheme.calmBlue,
+                            AppTheme.roseAccent,
                             "bpm",
                           ),
-                          const SizedBox(height: 100), 
+                          const SizedBox(height: 100),
                         ]),
                       ),
                     ),

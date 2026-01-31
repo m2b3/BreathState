@@ -9,12 +9,16 @@ class BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24), 
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 28), 
       child: GlassCard(
-        borderRadius: 40,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12), 
-        color: const Color(0xFF0F172A).withOpacity(0.8), 
+        borderRadius: 36,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10), 
+        color: isDark 
+            ? Colors.white.withOpacity(0.08)
+            : Colors.white.withOpacity(0.9),
         child: Consumer<NavBarProvider>(
           builder: (context, navBarProvider, child) {
             return Row(
@@ -79,41 +83,66 @@ class _NavBarItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSelected = index == currentIndex;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final activeColor = AppTheme.softTeal;
+    final inactiveColor = isDark 
+        ? Colors.white.withOpacity(0.45)
+        : Colors.black.withOpacity(0.4);
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutBack, 
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic, 
         padding: EdgeInsets.symmetric(
           horizontal: isSelected ? 16 : 12, 
           vertical: 10
         ),
         decoration: BoxDecoration(
           color: isSelected 
-              ? AppTheme.softTeal.withOpacity(0.15) 
+              ? activeColor.withOpacity(isDark ? 0.2 : 0.12) 
               : Colors.transparent,
           borderRadius: BorderRadius.circular(24),
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: activeColor.withOpacity(0.2),
+              blurRadius: 8,
+              spreadRadius: 0,
+              offset: const Offset(0, 2),
+            ),
+          ] : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              isSelected ? (activeIcon ?? icon) : icon,
-              color: isSelected ? AppTheme.softTeal : AppTheme.textDim,
-              size: 24,
-            ),
-            if (isSelected) ...[
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppTheme.softTeal,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13, 
-                    ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Icon(
+                isSelected ? (activeIcon ?? icon) : icon,
+                key: ValueKey(isSelected),
+                color: isSelected ? activeColor : inactiveColor,
+                size: 24,
               ),
-            ],
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              child: isSelected 
+                ? Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Text(
+                      label,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: activeColor,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13, 
+                          ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+            ),
           ],
         ),
       ),

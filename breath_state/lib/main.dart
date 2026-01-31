@@ -1,5 +1,6 @@
 import 'package:breath_state/providers/nav_bar_provider.dart';
 import 'package:breath_state/providers/polar_connect_provider.dart';
+import 'package:breath_state/providers/theme_provider.dart';
 import 'package:breath_state/screens/record_screen.dart';
 import 'package:breath_state/screens/settings_screen.dart';
 import 'package:flutter/material.dart';
@@ -23,6 +24,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => NavBarProvider(0)),
         ChangeNotifierProvider(create: (_) => PolarConnectProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
       child: const MyApp(),
     ),
@@ -46,19 +48,25 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'BreathState',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
-      home: Consumer<NavBarProvider>(
-        builder: (context, model, child) {
-          return Scaffold(
-            extendBody: true, 
-            body: screens[model.getIndex()],
-            bottomNavigationBar: const BottomNavBar(),
-          );
-        },
-      ),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          title: 'BreathState',
+          debugShowCheckedModeBanner: false,
+          themeMode: themeProvider.themeMode,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          home: Consumer<NavBarProvider>(
+            builder: (context, model, child) {
+              return Scaffold(
+                extendBody: true,
+                body: screens[model.getIndex()],
+                bottomNavigationBar: const BottomNavBar(),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 }
