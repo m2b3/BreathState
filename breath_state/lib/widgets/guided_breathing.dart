@@ -27,7 +27,6 @@ class _GuidedBreathingState extends State<GuidedBreathing> {
   Timer? _introTimer;
   Timer? _countdownTimer;
 
-  // Manual Animation State
   Timer? _animationTimer;
   DateTime? _phaseStartTime;
   double _startSize = 100.0;
@@ -59,7 +58,6 @@ class _GuidedBreathingState extends State<GuidedBreathing> {
       }
     });
 
-    // Start 60fps manual animation loop
     _animationTimer = Timer.periodic(const Duration(milliseconds: 16), _updateAnimation);
   }
 
@@ -69,7 +67,6 @@ class _GuidedBreathingState extends State<GuidedBreathing> {
     final now = DateTime.now();
     final elapsed = now.difference(_phaseStartTime!);
     
-    // Calculate progress 0.0 to 1.0
     double t = 0.0;
     if (_currentPhaseDuration.inMilliseconds > 0) {
       t = (elapsed.inMilliseconds / _currentPhaseDuration.inMilliseconds).clamp(0.0, 1.0);
@@ -77,10 +74,8 @@ class _GuidedBreathingState extends State<GuidedBreathing> {
       t = 1.0;
     }
 
-    // Apply curve manually
     final curveValue = Curves.easeInOutSine.transform(t);
 
-    // Lerp size manually
     final newSize = lerpDouble(_startSize, _endSize, curveValue) ?? _minSize;
 
     setState(() {
@@ -94,7 +89,6 @@ class _GuidedBreathingState extends State<GuidedBreathing> {
     if (!mounted) return;
     setState(() {
       _phaseText = "Inhale";
-      // Setup Manual Animation Target
       _phaseStartTime = DateTime.now();
       _startSize = _minSize;
       _endSize = _maxSize;
@@ -117,7 +111,6 @@ class _GuidedBreathingState extends State<GuidedBreathing> {
     if (!mounted) return;
     setState(() {
       _phaseText = "Exhale";
-      // Setup Manual Animation Target
       _phaseStartTime = DateTime.now();
       _startSize = _maxSize;
       _endSize = _minSize;
@@ -140,7 +133,6 @@ class _GuidedBreathingState extends State<GuidedBreathing> {
     if (!mounted) return;
     setState(() {
       _phaseText = "Hold";
-      // Setup Manual Animation Target (Static)
       _phaseStartTime = DateTime.now();
       _startSize = _currentSize;
       _endSize = _currentSize;
@@ -186,7 +178,6 @@ class _GuidedBreathingState extends State<GuidedBreathing> {
 
   @override
   Widget build(BuildContext context) {
-    // Manually calculate shadow properties
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -238,9 +229,8 @@ class _GuidedBreathingState extends State<GuidedBreathing> {
                           boxShadow: [
                             BoxShadow(
                               color: AppTheme.softTeal.withOpacity(0.4),
-                              // Snap shadow values based on proximity to max size or interpolate if needed
-                              blurRadius: (_currentSize - _minSize) / (_maxSize - _minSize) * 20 + 30, // 30 to 50
-                              spreadRadius: (_currentSize - _minSize) / (_maxSize - _minSize) * 10 + 5, // 5 to 15
+                              blurRadius: (_currentSize - _minSize) / (_maxSize - _minSize) * 20 + 30,
+                              spreadRadius: (_currentSize - _minSize) / (_maxSize - _minSize) * 10 + 5,
                             ),
                           ],
                         ),
