@@ -142,12 +142,11 @@ class _BreathingCard extends StatelessWidget {
 
   const _BreathingCard({required this.option, required this.index});
 
-  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBgOpacity = isDark ? 0.18 : 0.7;
-    final iconBgOpacity = isDark ? 0.25 : 0.15;
-    final shadowOpacity = isDark ? 0.3 : 0.2;
+    final cardBgOpacity = isDark ? 0.22 : 0.08; 
+    final iconBgOpacity = isDark ? 0.40 : 0.60; 
+    final shadowOpacity = isDark ? 0.4 : 0.08;
 
     return GestureDetector(
       onTap: () {
@@ -223,7 +222,7 @@ class _BreathingCard extends StatelessWidget {
                    ),
                 ]
               ),
-              child: Icon(option.icon, size: 32, color: option.color),
+              child: Icon(option.icon, size: 32, color: isDark ? Colors.white : Colors.black),
             ),
             const Spacer(flex: 2),
             Text(

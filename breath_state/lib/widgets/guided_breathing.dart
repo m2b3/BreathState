@@ -236,15 +236,13 @@ class _GuidedBreathingState extends State<GuidedBreathing> {
                         child: Center(
                           child: _introSecondsLeft > 0
                               ? const SizedBox.shrink()
-                              : AnimatedOpacity(
-                                  opacity: _phaseSecondsLeft <= 3 ? 0.3 : 1.0, 
-                                   duration: const Duration(milliseconds: 300),
-                                  child: Text(
-                                    '$_phaseSecondsLeft',
-                                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                                      fontSize: 48,
-                                      color: Colors.white,
-                                    ),
+                              : Text(
+                                  '$_phaseSecondsLeft',
+                                  style: const TextStyle(
+                                    fontSize: 48,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    height: 1.1,
                                   ),
                                 ),
                         ),
@@ -260,7 +258,9 @@ class _GuidedBreathingState extends State<GuidedBreathing> {
                 _introSecondsLeft > 0
                     ? "Relax... $_introSecondsLeft"
                     : _phaseText,
-                style: Theme.of(context).textTheme.displayMedium,
+                style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                  color: Colors.white,
+                ),
               ),
 
               const Spacer(flex: 2),

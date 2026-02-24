@@ -83,8 +83,8 @@ class _HomeScreenState extends State<HomeScreen> {
     final labelColor = Theme.of(context).textTheme.bodyMedium?.color ?? Colors.grey;
 
     return GlassCard(
-      margin: const EdgeInsets.only(bottom: 24),
-      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -147,9 +147,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 20),
           AspectRatio(
-            aspectRatio: 2.0,
+            aspectRatio: 2.4,
             child: hasData
                 ? LineChart(
                     LineChartData(
@@ -250,25 +250,33 @@ class _HomeScreenState extends State<HomeScreen> {
               : CustomScrollView(
                   slivers: [
                     SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                      padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
                       sliver: SliverToBoxAdapter(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const SizedBox(height: 20),
-                            Text(
-                              _getGreeting(),
-                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: Theme.of(context).textTheme.bodyMedium?.color, 
-                                    fontSize: 18,
-                                  ),
-                            ),
                             const SizedBox(height: 8),
-                            Text(
-                              "Welcome!",
-                              style: Theme.of(context).textTheme.displayLarge,
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(
+                                  _getGreeting(),
+                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                        color: Theme.of(context).textTheme.bodyMedium?.color, 
+                                        fontSize: 20,
+                                      ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "Welcome!",
+                                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                                    fontSize: 24,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 40),
+                            const SizedBox(height: 16),
                           ],
                         ),
                       ),
@@ -281,7 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             breathRows,
                             "Breathing Rate",
                             AppTheme.softTeal,
-                            "bpm",
+                            "/min",
                           ),
                           _buildChartCard(
                             heartRows,
@@ -289,7 +297,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             AppTheme.roseAccent,
                             "bpm",
                           ),
-                          const SizedBox(height: 100),
+                          const SizedBox(height: 24),
                         ]),
                       ),
                     ),

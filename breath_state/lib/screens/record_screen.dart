@@ -3,10 +3,12 @@ import 'package:breath_state/providers/nav_bar_provider.dart';
 import 'package:breath_state/providers/polar_connect_provider.dart';
 import 'package:breath_state/services/breath_rate/record.dart';
 import 'package:breath_state/services/heart_rate/polar_connect.dart';
+import 'package:breath_state/services/hrv_analysis/hrv_time_domain.dart';
 import 'package:breath_state/services/resonance_service/res_freq.dart';
 import 'package:breath_state/services/resonance_service/rf_trainer.dart';
 import 'package:breath_state/theme/app_theme.dart';
 import 'package:breath_state/widgets/glass_card.dart';
+import 'package:breath_state/widgets/hrv_result_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -96,12 +98,17 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
     if (polar != null) {
       try {
         await polar.stopRecording();
+        final hrvResult = polar.lastSessionHrv;
         setState(() {
           _hrStream = null;
           isRecordingHR = false;
         });
         developer.log("HR recording stopped");
         _checkStopEffect();
+
+        if (hrvResult != null && mounted) {
+          _showHrvResultSheet(hrvResult);
+        }
       } catch (e) {
         developer.log("Error stopping HR recording: $e");
       }
@@ -110,6 +117,51 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
       isRecordingHR = false;
     });
     _checkStopEffect();
+  }
+
+  void _showHrvResultSheet(HrvTimeDomainResult result) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        builder: (context, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.midnightBlue : AppTheme.pureWhite,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          child: SingleChildScrollView(
+            controller: scrollController,
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+            child: Column(
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: (isDark ? Colors.white : Colors.black).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Text(
+                  "Session Results",
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                HrvResultCard(result: result),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _checkStopEffect() {
@@ -243,13 +295,13 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
           child: LayoutBuilder(
             builder: (context, constraints) {
               return SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.fromLTRB(24.0, 12.0, 24.0, 24.0),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(minHeight: constraints.maxHeight),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 8),
                       Text(
                         "Live Record",
                         style: Theme.of(context).textTheme.displayLarge,
@@ -261,7 +313,7 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
                           color: Theme.of(context).textTheme.bodyMedium?.color,
                         ),
                       ),
-                      const SizedBox(height: 48),
+                      const SizedBox(height: 24),
 
                       Center(
                         child: GestureDetector(
@@ -277,8 +329,8 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
                               return Transform.scale(
                                 scale: scale,
                                 child: Container(
-                                  width: 200,
-                                  height: 200,
+                                  width: 150,
+                                  height: 150,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     gradient: LinearGradient(
@@ -305,7 +357,7 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
                                             children: [
                                               const Icon(
                                                 Icons.mic,
-                                                size: 48,
+                                                size: 32,
                                                 color: Colors.white,
                                               ),
                                               const SizedBox(height: 8),
@@ -333,13 +385,13 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
                                             children: [
                                               const Icon(
                                                 Icons.play_arrow_rounded,
-                                                size: 64,
+                                                size: 48,
                                                 color: Colors.white,
                                               ),
-                                              const SizedBox(height: 8),
+                                              const SizedBox(height: 4),
                                               Text(
                                                 "START",
-                                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                                   color: Colors.white,
                                                   fontWeight: FontWeight.bold,
                                                   letterSpacing: 2,
@@ -355,7 +407,7 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
                         ),
                       ),
 
-                      const SizedBox(height: 56),
+                      const SizedBox(height: 32),
 
                       Row(
                         children: [
@@ -501,7 +553,7 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
                           );
                         }
                       ),
-                      const SizedBox(height: 100),
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
