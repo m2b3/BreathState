@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'dart:developer' as developer;
-import 'dart:math';
 import 'dart:convert';
 import 'package:polar/polar.dart';
 import 'package:breath_state/services/heart_rate/polar_connect.dart';
 import 'package:breath_state/services/file_service/file_write.dart';
 import 'package:breath_state/constants/file_constants.dart';
+import 'package:breath_state/services/hrv_analysis/hrv_time_domain.dart';
 
 class ResonanceFrequency {
 
@@ -14,6 +14,7 @@ class ResonanceFrequency {
   final List<int> _rPeaksTimestamps = [];
 
   final Map<double, double> rmssdResults = {};
+  final Map<double, HrvTimeDomainResult> hrvResults = {};
 
   final int _timeInterval = 65;//TODO- To be changed
 
@@ -77,16 +78,22 @@ class ResonanceFrequency {
     } catch (e) {
       developer.log("Error saving ECG data: $e");
     }
-    List<int> rrIntervals = [];
+    List<double> rrIntervals = [];
     for (int i = 1; i < _rPeaksTimestamps.length; i++) {
-      rrIntervals.add(_rPeaksTimestamps[i] - _rPeaksTimestamps[i - 1]);
-      developer.log("RR Interval ${i - 1}: ${rrIntervals.last} ms");
+      final interval = (_rPeaksTimestamps[i] - _rPeaksTimestamps[i - 1]).toDouble();
+      rrIntervals.add(interval);
+      developer.log("RR Interval ${i - 1}: ${interval.toInt()} ms");
     }
 
-    double rmssd = _calculateRMSSD(rrIntervals);
-    rmssdResults[breathingRate] = rmssd;
-
-    developer.log("RMSSD at $breathingRate BPM breathing: $rmssd");
+    if (rrIntervals.length >= 2) {
+      final hrvResult = HrvTimeDomain.compute(rrIntervals);
+      rmssdResults[breathingRate] = hrvResult.rmssd;
+      hrvResults[breathingRate] = hrvResult;
+      developer.log("RMSSD at $breathingRate BPM breathing: ${hrvResult.rmssd}");
+    } else {
+      rmssdResults[breathingRate] = 0.0;
+      developer.log("Not enough RR intervals at $breathingRate BPM");
+    }
 
     await _ecgSub?.cancel();
   }
@@ -96,8 +103,8 @@ class ResonanceFrequency {
 
     List<double> smoothed = [];
     for (int i = 0; i < samples.length; i++) {
-      int start = max(0, i - _smoothWindowSize ~/ 2);
-      int end = min(samples.length - 1, i + _smoothWindowSize ~/ 2);
+      int start = (i - _smoothWindowSize ~/ 2).clamp(0, samples.length - 1);
+      int end = (i + _smoothWindowSize ~/ 2).clamp(0, samples.length - 1);
       double sum = 0;
       for (int j = start; j <= end; j++) {
         sum += samples[j].voltage.toDouble();
@@ -127,25 +134,20 @@ class ResonanceFrequency {
     return smoothed;
   }
 
-  double _calculateRMSSD(List<int> rr) {
-    if (rr.length < 2) return 0.0;
-    double sumSqDiff = 0.0;
-    for (int i = 1; i < rr.length; i++) {
-      double diff = (rr[i] - rr[i - 1]).toDouble();
-      sumSqDiff += diff * diff;
-    }
-    return sqrt(sumSqDiff / (rr.length - 1));
-  }
-
   double getResonanceBreathingRate() {
     if (rmssdResults.isEmpty) {
       developer.log("No RMSSD results available.");
       return 0.0;
     }
-    double maxRmssd = rmssdResults.values.reduce(max);
+    double maxRmssd = rmssdResults.values.reduce((a, b) => a > b ? a : b);
     userResonanceFreq= rmssdResults.entries
         .firstWhere((entry) => entry.value == maxRmssd)
         .key;
     return userResonanceFreq;
+  }
+
+  HrvTimeDomainResult? getWinningHrvResult() {
+    final winningRate = getResonanceBreathingRate();
+    return hrvResults[winningRate];
   }
 }
