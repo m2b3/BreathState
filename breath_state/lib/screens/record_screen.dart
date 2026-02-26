@@ -11,6 +11,7 @@ import 'package:breath_state/widgets/glass_card.dart';
 import 'package:breath_state/widgets/hrv_result_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class RecordScreen extends StatefulWidget {
   const RecordScreen({super.key});
@@ -49,6 +50,7 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
     required bool recordBR,
     required bool recordHR,
   }) async {
+    WakelockPlus.enable();
     if (recordBR) {
       _recorder = SoundRecorder();
       setState(() {
@@ -166,6 +168,7 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
 
   void _checkStopEffect() {
     if (!isRecordingHR && !isRecordingBR) {
+      WakelockPlus.disable();
       _pulseController.stop();
       _pulseController.reset();
     }
@@ -224,7 +227,7 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
                       ),
                     ),
                     child: CheckboxListTile(
-                      title: Text("Breathing Rate", style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
+                      title: Text("Breath Rate", style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
                       subtitle: Text("Using Microphone", style: Theme.of(context).textTheme.bodySmall),
                       value: recordBR,
                       activeColor: AppTheme.softTeal,
@@ -345,8 +348,8 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
                                         color: isActive
                                             ? AppTheme.coralRose.withOpacity(shadowOpacity)
                                             : AppTheme.softTeal.withOpacity(shadowOpacity),
-                                        blurRadius: 30,
-                                        spreadRadius: 10,
+                                        blurRadius: 15, 
+                                        spreadRadius: 2, 
                                       ),
                                     ],
                                   ),
@@ -418,7 +421,7 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
                                 children: [
                                   Icon(Icons.air, color: AppTheme.softTeal, size: 32),
                                   const SizedBox(height: 8),
-                                  Text("Breathing Rate", style: Theme.of(context).textTheme.labelMedium),
+                                  Text("Breath Rate", style: Theme.of(context).textTheme.labelMedium),
                                   const SizedBox(height: 8),
                                   if (breathingRate == -1)
                                      const SizedBox(
@@ -482,7 +485,7 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
                         builder: (context, provider, child) {
                           return GlassCard(
                             padding: EdgeInsets.zero,
-                            color: Theme.of(context).primaryColor, 
+                            color: Theme.of(context).primaryColor,
                             child: InkWell(
                               onTap: () {
                                  _stopHRRecording();

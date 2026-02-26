@@ -270,8 +270,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 const SizedBox(width: 8),
                                 Text(
                                   "Welcome!",
-                                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                                    fontSize: 24,
+                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                        color: Theme.of(context).textTheme.bodyMedium?.color, 
+                                        fontSize: 20,
                                   ),
                                 ),
                               ],
@@ -287,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         delegate: SliverChildListDelegate([
                           _buildChartCard(
                             breathRows,
-                            "Breathing Rate",
+                            "Breath Rate",
                             AppTheme.softTeal,
                             "/min",
                           ),
