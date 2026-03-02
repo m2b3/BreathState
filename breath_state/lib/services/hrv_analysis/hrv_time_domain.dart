@@ -1,123 +1,30 @@
-/// BreathState — HRV Time-Domain Analysis Module
-///
-/// Pure-Dart translation of NeuroKit2's `hrv_time` function.
-/// Computes 20+ time-domain HRV indices entirely offline with zero
-/// external package dependencies.
-///
-/// Usage:
-/// ```dart
-/// // From RR intervals (ms) — typical Polar H10 output
-/// final rri = [812.0, 798.0, 825.0, 801.0, 790.0, ...];
-/// final hrv = HrvTimeDomain.compute(rri);
-///
-/// print(hrv.rmssd);            // single metric
-/// print(hrv.essentials());     // key metrics for quick UI display
-/// print(hrv.toMap());          // all 20+ metrics as Map<String, double?>
-///
-/// // From R-peak timestamps (ms)
-/// final peaks = [0.0, 812.0, 1610.0, 2435.0, ...];
-/// final hrv2 = HrvTimeDomain.computeFromPeakTimestamps(peaks);
-/// ```
-///
-/// References:
-///   Pham T. et al. (2021) Sensors 21(12):3998
-///   https://doi.org/10.3390/s21123998
-///
-///   NeuroKit2 source: neurokit2/hrv/hrv_time.py
-///   https://github.com/neuropsychology/NeuroKit
-
 import 'dart:math';
 
-// ═════════════════════════════════════════════════════════════════════
-//  RESULT MODEL
-// ═════════════════════════════════════════════════════════════════════
-
-/// Holds every computed HRV time-domain metric.
-///
-/// All values are in **milliseconds** unless stated otherwise
-/// (ratios and percentages are dimensionless / %).
 class HrvTimeDomainResult {
-  // ── Deviation-based (from NN intervals directly) ─────────────
-  /// Mean of RR intervals (ms).
   final double meanNN;
-
-  /// Standard deviation of RR intervals (ms) — overall HRV.
   final double sdnn;
-
-  // ── Difference-based (from successive NN differences) ────────
-  /// Root mean square of successive differences (ms) — parasympathetic.
   final double rmssd;
-
-  /// Standard deviation of successive differences (ms).
   final double sdsd;
-
-  // ── Normalised ───────────────────────────────────────────────
-  /// SDNN / MeanNN — coefficient of variation.
   final double cvnn;
-
-  /// RMSSD / MeanNN — normalised parasympathetic index.
   final double cvsd;
-
-  // ── Robust ───────────────────────────────────────────────────
-  /// Median of RR intervals (ms).
   final double medianNN;
-
-  /// Median absolute deviation of RR intervals (ms).
   final double madNN;
-
-  /// MadNN / MedianNN — robust normalised dispersion.
   final double mcvnn;
-
-  /// Interquartile range of RR intervals (ms).
   final double iqrnn;
-
-  /// SDNN / RMSSD — time-domain proxy for the LF/HF ratio
-  /// (sympatho-vagal balance). Sollers et al. 2007.
   final double sdrmssd;
-
-  /// 20th percentile of RR intervals (ms).
   final double prc20nn;
-
-  /// 80th percentile of RR intervals (ms).
   final double prc80nn;
-
-  // ── Count / Extreme ──────────────────────────────────────────
-  /// % of successive differences > 50 ms — parasympathetic marker.
   final double pnn50;
-
-  /// % of successive differences > 20 ms — more sensitive than pNN50.
   final double pnn20;
-
-  /// Minimum RR interval (ms).
   final double minNN;
-
-  /// Maximum RR interval (ms).
   final double maxNN;
-
-  // ── Geometric ────────────────────────────────────────────────
-  /// HRV Triangular Index — total NN count / histogram peak height.
   final double hti;
-
-  /// Triangular Interpolation of NN histogram baseline width (ms).
   final double tinn;
-
-  // ── Long-duration windowed (null if recording too short) ─────
-  /// SD of mean RR in 1-min windows. Needs ≥ 3 min.
   final double? sdann1;
-
-  /// SD of mean RR in 2-min windows. Needs ≥ 6 min.
   final double? sdann2;
-
-  /// SD of mean RR in 5-min windows. Needs ≥ 15 min.
   final double? sdann5;
-
-  /// Mean of SD of RR in 1-min windows. Needs ≥ 3 min.
   final double? sdnni1;
-
-  /// Mean of SD of RR in 2-min windows. Needs ≥ 6 min.
   final double? sdnni2;
-
-  /// Mean of SD of RR in 5-min windows. Needs ≥ 15 min.
   final double? sdnni5;
 
   const HrvTimeDomainResult({
@@ -148,7 +55,6 @@ class HrvTimeDomainResult {
     this.sdnni5,
   });
 
-  /// All metrics as a map, prefixed with `HRV_` (NeuroKit convention).
   Map<String, double?> toMap() => {
         'HRV_MeanNN': meanNN,
         'HRV_SDNN': sdnn,
@@ -177,7 +83,6 @@ class HrvTimeDomainResult {
         'HRV_SDNNI5': sdnni5,
       };
 
-  /// Safely format a numeric value with fixed decimals, returning '—' if non-finite.
   String _formatValue(double value, int decimals) {
     if (!value.isFinite) {
       return '—';
@@ -185,7 +90,6 @@ class HrvTimeDomainResult {
     return value.toStringAsFixed(decimals);
   }
 
-  /// The most clinically actionable metrics for quick UI display.
   Map<String, String> essentials() {
     final double heartRate = 60000.0 / meanNN;
     final double cvPercent = cvsd * 100.0;
@@ -200,7 +104,6 @@ class HrvTimeDomainResult {
       'CV%': '${_formatValue(cvPercent, 1)}%',
     };
   }
-  /// Stress-relevant subset (higher SDRMSSD & lower RMSSD → more stress).
   Map<String, double> stressIndicators() => {
         'RMSSD': rmssd,
         'SDNN': sdnn,
@@ -217,26 +120,9 @@ class HrvTimeDomainResult {
       .join('\n');
 }
 
-// ═════════════════════════════════════════════════════════════════════
-//  COMPUTATION ENGINE
-// ═════════════════════════════════════════════════════════════════════
-
-/// Static, stateless HRV time-domain calculator.
-///
-/// All inputs are **RR intervals in milliseconds**.
 class HrvTimeDomain {
-  HrvTimeDomain._(); // non-instantiable utility class
+  HrvTimeDomain._(); 
 
-  // ─────────────────────────────────────────────────────────────
-  //  PUBLIC API
-  // ─────────────────────────────────────────────────────────────
-
-  /// Compute every time-domain HRV index from [rrIntervalsMs].
-  ///
-  /// * [rrIntervalsMs] — successive RR (NN) intervals in milliseconds.
-  ///   Must contain ≥ 2 values.
-  /// * [binSize] — histogram bin width for geometric indices.
-  ///   Default 7.8125 ms matches NeuroKit's `(1/128) * 1000`.
   static HrvTimeDomainResult compute(
     List<double> rrIntervalsMs, {
     double binSize = 7.8125,
@@ -254,19 +140,15 @@ class HrvTimeDomain {
     final diff = _successiveDiff(rri);
     final absDiff = diff.map((d) => d.abs()).toList();
 
-    // ── Deviation-based ──────────────────────────────────────
     final meanNN = _mean(rri);
     final sdnn = _std(rri);
 
-    // ── Difference-based ─────────────────────────────────────
     final rmssd = sqrt(_mean(diff.map((d) => d * d).toList()));
     final sdsd = _std(diff);
 
-    // ── Normalised ───────────────────────────────────────────
     final cvnn = meanNN == 0 ? double.nan : sdnn / meanNN;
     final cvsd = meanNN == 0 ? double.nan : rmssd / meanNN;
 
-    // ── Robust ───────────────────────────────────────────────
     final medianNN = _median(rri);
     final madNN = _mad(rri);
     final mcvnn = medianNN == 0 ? double.nan : madNN / medianNN;
@@ -275,8 +157,6 @@ class HrvTimeDomain {
     final prc20nn = _percentile(rri, 20);
     final prc80nn = _percentile(rri, 80);
 
-    // ── Count / Extreme ──────────────────────────────────────
-    // Denominator is (diff.length + 1) == rri.length  — matches NeuroKit
     final nn50 = absDiff.where((d) => d > 50).length;
     final nn20 = absDiff.where((d) => d > 20).length;
     final denom = diff.length + 1;
@@ -285,11 +165,9 @@ class HrvTimeDomain {
     final minNN = _min(rri);
     final maxNN = _max(rri);
 
-    // ── Geometric ────────────────────────────────────────────
     final hti = _computeHTI(rri, binSize);
     final tinn = _computeTINN(rri, binSize);
 
-    // ── Long-duration windowed ───────────────────────────────
     final sdann1 = _sdann(rri, windowMinutes: 1);
     final sdann2 = _sdann(rri, windowMinutes: 2);
     final sdann5 = _sdann(rri, windowMinutes: 5);
@@ -326,8 +204,6 @@ class HrvTimeDomain {
     );
   }
 
-  /// Convenience: compute from R-peak timestamps (ms) instead of
-  /// RR intervals.  Needs ≥ 3 peak timestamps.
   static HrvTimeDomainResult computeFromPeakTimestamps(
     List<double> peakTimestampsMs, {
     double binSize = 7.8125,
@@ -339,7 +215,6 @@ class HrvTimeDomain {
     return compute(rri, binSize: binSize);
   }
 
-  /// Convenience: compute from R-peak sample indices + sampling rate.
   static HrvTimeDomainResult computeFromPeakSamples(
     List<int> peakSampleIndices, {
     required int samplingRate,
@@ -356,20 +231,12 @@ class HrvTimeDomain {
     }
     return compute(rri, binSize: binSize);
   }
-
-  // ─────────────────────────────────────────────────────────────
-  //  PRIVATE — Statistical helpers  (replaces numpy / scipy)
-  // ─────────────────────────────────────────────────────────────
-
-  /// Remove NaN and infinite values.
   static List<double> _clean(List<double> v) =>
       v.where((x) => x.isFinite).toList();
 
-  /// Successive differences: v[1]-v[0], v[2]-v[1], …
   static List<double> _successiveDiff(List<double> v) =>
       [for (int i = 1; i < v.length; i++) v[i] - v[i - 1]];
 
-  /// Arithmetic mean.
   static double _mean(List<double> v) {
     if (v.isEmpty) return double.nan;
     double sum = 0;
@@ -379,7 +246,6 @@ class HrvTimeDomain {
     return sum / v.length;
   }
 
-  /// Sample standard deviation (Bessel-corrected, ddof = 1).
   static double _std(List<double> v) {
     if (v.length < 2) return double.nan;
     final m = _mean(v);
@@ -391,7 +257,6 @@ class HrvTimeDomain {
     return sqrt(ss / (v.length - 1));
   }
 
-  /// Median.
   static double _median(List<double> v) {
     if (v.isEmpty) return double.nan;
     final s = List<double>.from(v)..sort();
@@ -399,14 +264,12 @@ class HrvTimeDomain {
     return s.length.isOdd ? s[mid] : (s[mid - 1] + s[mid]) / 2.0;
   }
 
-  /// Median Absolute Deviation.
   static double _mad(List<double> v) {
     if (v.isEmpty) return double.nan;
     final med = _median(v);
     return _median(v.map((x) => (x - med).abs()).toList());
   }
 
-  /// Percentile using linear interpolation (q in 0–100).
   static double _percentile(List<double> v, double q) {
     if (v.isEmpty) return double.nan;
     final s = List<double>.from(v)..sort();
@@ -417,7 +280,6 @@ class HrvTimeDomain {
     return s[lo] + (s[hi] - s[lo]) * (idx - lo);
   }
 
-  /// Interquartile range (Q75 − Q25).
   static double _iqr(List<double> v) =>
       _percentile(v, 75) - _percentile(v, 25);
 
@@ -427,11 +289,6 @@ class HrvTimeDomain {
   static double _max(List<double> v) =>
       v.isEmpty ? double.nan : v.reduce(max);
 
-  // ─────────────────────────────────────────────────────────────
-  //  PRIVATE — Geometric indices
-  // ─────────────────────────────────────────────────────────────
-
-  /// HRV Triangular Index = N(total) / max(histogram).
   static double _computeHTI(List<double> rri, double binSize) {
     if (rri.length < 2) return double.nan;
     final maxRR = _max(rri);
@@ -445,15 +302,12 @@ class HrvTimeDomain {
     return peak == 0 ? double.nan : rri.length / peak.toDouble();
   }
 
-  /// TINN — baseline width of a least-squares triangular fit to the
-  /// NN-interval histogram.
   static double _computeTINN(List<double> rri, double binSize) {
     if (rri.length < 10) return double.nan;
 
     final maxRR = _max(rri);
     final minRR = _min(rri);
 
-    // Build histogram -------------------------------------------------
     final List<double> edges = [];
     for (double e = 0; e <= maxRR + binSize; e += binSize) {
       edges.add(e);
@@ -467,7 +321,6 @@ class HrvTimeDomain {
       if (idx >= 0 && idx < nBins) counts[idx]++;
     }
 
-    // Find peak bin ---------------------------------------------------
     int peakIdx = 0;
     for (int i = 1; i < nBins; i++) {
       if (counts[i] > counts[peakIdx]) peakIdx = i;
@@ -476,7 +329,6 @@ class HrvTimeDomain {
     final double peakY = counts[peakIdx].toDouble();
     if (peakY == 0) return double.nan;
 
-    // First edge above min(RR) ----------------------------------------
     int nStart = 0;
     for (int i = 0; i < edges.length; i++) {
       if (edges[i] > minRR) {
@@ -485,7 +337,6 @@ class HrvTimeDomain {
       }
     }
 
-    // Brute-force search for optimal N (left foot) & M (right foot) ---
     double minError = double.infinity;
     double bestN = 0, bestM = 0;
 
@@ -522,11 +373,6 @@ class HrvTimeDomain {
     return bestM - bestN;
   }
 
-  // ─────────────────────────────────────────────────────────────
-  //  PRIVATE — Long-duration windowed measures
-  // ─────────────────────────────────────────────────────────────
-
-  /// Cumulative elapsed time (ms) at the *end* of each RR interval.
   static List<double> _cumulativeMs(List<double> rri) {
     final cum = List<double>.filled(rri.length, 0);
     cum[0] = rri[0];
@@ -536,7 +382,6 @@ class HrvTimeDomain {
     return cum;
   }
 
-  /// Gather RR intervals that fall into each time window.
   static List<List<double>> _windowSegments(
       List<double> rri, double windowMs) {
     final cum = _cumulativeMs(rri);
@@ -557,8 +402,6 @@ class HrvTimeDomain {
     return segments;
   }
 
-  /// SDANN: SD of per-window mean RR.
-  /// Returns `null` if recording is shorter than 3 × window.
   static double? _sdann(List<double> rri, {required int windowMinutes}) {
     final segs = _windowSegments(rri, windowMinutes * 60000.0);
     if (segs.length < 3) return null;
@@ -566,8 +409,6 @@ class HrvTimeDomain {
     return _std(means);
   }
 
-  /// SDNNI: mean of per-window SD of RR.
-  /// Returns `null` if recording is shorter than 3 × window.
   static double? _sdnni(List<double> rri, {required int windowMinutes}) {
     final segs = _windowSegments(rri, windowMinutes * 60000.0);
     if (segs.length < 3) return null;
