@@ -221,8 +221,9 @@ class _GuidedBreathingState extends State<GuidedBreathing> {
   String _formatTimer() {
     if (widget.totalDuration == null) return '';
     final remaining = widget.totalDuration!.inSeconds - _totalSecondsElapsed;
-    final m = (remaining ~/ 60).toString().padLeft(2, '0');
-    final s = (remaining % 60).toString().padLeft(2, '0');
+    final clampedRemaining = remaining < 0 ? 0 : remaining;
+    final m = (clampedRemaining ~/ 60).toString().padLeft(2, '0');
+    final s = (clampedRemaining % 60).toString().padLeft(2, '0');
     return '$m:$s';
   }
 
