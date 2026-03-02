@@ -389,6 +389,7 @@ class _BreathingCard extends StatelessWidget {
     required this.onSettingsTap,
   });
 
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBgOpacity = isDark ? 0.22 : 0.08; 
