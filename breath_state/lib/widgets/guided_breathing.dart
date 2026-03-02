@@ -422,7 +422,7 @@ class _GuidedBreathingState extends State<GuidedBreathing> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 40),
                       child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => Navigator.maybePop(context),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: baseColor.withOpacity(0.1),
                           foregroundColor: baseColor,
