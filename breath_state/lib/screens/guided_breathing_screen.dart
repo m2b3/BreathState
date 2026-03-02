@@ -466,21 +466,16 @@ class _BreathingCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                GestureDetector(
-                  onTap: () {
-                    // Prevent card tap trigger
-                  },
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.settings_rounded, 
-                      size: 20,
-                      color: isDark ? Colors.white54 : Colors.black45,
-                    ),
-                    onPressed: onSettingsTap,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    splashRadius: 20,
+                IconButton(
+                  icon: Icon(
+                    Icons.settings_rounded, 
+                    size: 20,
+                    color: isDark ? Colors.white54 : Colors.black45,
                   ),
+                  onPressed: onSettingsTap,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  splashRadius: 20,
                 ),
               ],
             ),
