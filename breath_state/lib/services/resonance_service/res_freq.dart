@@ -103,8 +103,8 @@ class ResonanceFrequency {
 
     List<double> smoothed = [];
     for (int i = 0; i < samples.length; i++) {
-      int start = (i - _smoothWindowSize ~/ 2).clamp(0, samples.length - 1);
-      int end = (i + _smoothWindowSize ~/ 2).clamp(0, samples.length - 1);
+      int start = (i - _smoothWindowSize ~/ 2).clamp(0, samples.length - 1).toInt();
+      int end = (i + _smoothWindowSize ~/ 2).clamp(0, samples.length - 1).toInt();
       double sum = 0;
       for (int j = start; j <= end; j++) {
         sum += samples[j].voltage.toDouble();
