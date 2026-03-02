@@ -251,15 +251,15 @@ class HrvTimeDomain {
     final sdsd = _std(diff);
 
     // ── Normalised ───────────────────────────────────────────
-    final cvnn = sdnn / meanNN;
-    final cvsd = rmssd / meanNN;
+    final cvnn = meanNN == 0 ? double.nan : sdnn / meanNN;
+    final cvsd = meanNN == 0 ? double.nan : rmssd / meanNN;
 
     // ── Robust ───────────────────────────────────────────────
     final medianNN = _median(rri);
     final madNN = _mad(rri);
-    final mcvnn = madNN / medianNN;
+    final mcvnn = medianNN == 0 ? double.nan : madNN / medianNN;
     final iqrnn = _iqr(rri);
-    final sdrmssd = sdnn / rmssd;
+    final sdrmssd = rmssd == 0 ? double.nan : sdnn / rmssd;
     final prc20nn = _percentile(rri, 20);
     final prc80nn = _percentile(rri, 80);
 
