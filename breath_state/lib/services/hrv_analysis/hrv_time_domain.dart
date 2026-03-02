@@ -177,17 +177,29 @@ class HrvTimeDomainResult {
         'HRV_SDNNI5': sdnni5,
       };
 
-  /// The most clinically actionable metrics for quick UI display.
-  Map<String, String> essentials() => {
-        'Heart Rate': '${(60000.0 / meanNN).toStringAsFixed(1)} bpm',
-        'RMSSD': '${rmssd.toStringAsFixed(1)} ms',
-        'SDNN': '${sdnn.toStringAsFixed(1)} ms',
-        'pNN50': '${pnn50.toStringAsFixed(1)}%',
-        'pNN20': '${pnn20.toStringAsFixed(1)}%',
-        'LF/HF Proxy': sdrmssd.toStringAsFixed(2),
-        'CV%': '${(cvsd * 100).toStringAsFixed(1)}%',
-      };
+  /// Safely format a numeric value with fixed decimals, returning '—' if non-finite.
+  String _formatValue(double value, int decimals) {
+    if (!value.isFinite) {
+      return '—';
+    }
+    return value.toStringAsFixed(decimals);
+  }
 
+  /// The most clinically actionable metrics for quick UI display.
+  Map<String, String> essentials() {
+    final double heartRate = 60000.0 / meanNN;
+    final double cvPercent = cvsd * 100.0;
+
+    return {
+      'Heart Rate': '${_formatValue(heartRate, 1)} bpm',
+      'RMSSD': '${_formatValue(rmssd, 1)} ms',
+      'SDNN': '${_formatValue(sdnn, 1)} ms',
+      'pNN50': '${_formatValue(pnn50, 1)}%',
+      'pNN20': '${_formatValue(pnn20, 1)}%',
+      'LF/HF Proxy': _formatValue(sdrmssd, 2),
+      'CV%': '${_formatValue(cvPercent, 1)}%',
+    };
+  }
   /// Stress-relevant subset (higher SDRMSSD & lower RMSSD → more stress).
   Map<String, double> stressIndicators() => {
         'RMSSD': rmssd,
