@@ -32,7 +32,7 @@ class _GuidedBreathingScreenState extends State<GuidedBreathingScreen> {
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  context.read<NavBarProvider>().changeIndex(2);
+                  context.read<NavBarProvider>().changeIndex(1);
                 },
                 child: const Text("Go to Measure", style: TextStyle(fontWeight: FontWeight.bold)),
               ),
