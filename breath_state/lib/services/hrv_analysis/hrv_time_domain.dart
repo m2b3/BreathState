@@ -159,9 +159,9 @@ class HrvTimeDomain {
 
     final nn50 = absDiff.where((d) => d > 50).length;
     final nn20 = absDiff.where((d) => d > 20).length;
-    final denom = diff.length + 1;
-    final pnn50 = nn50 / denom * 100.0;
-    final pnn20 = nn20 / denom * 100.0;
+    final denom = diff.length;
+    final pnn50 = denom == 0 ? double.nan : nn50 / denom * 100.0;
+    final pnn20 = denom == 0 ? double.nan : nn20 / denom * 100.0;
     final minNN = _min(rri);
     final maxNN = _max(rri);
 
