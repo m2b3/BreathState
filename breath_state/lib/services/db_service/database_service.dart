@@ -19,7 +19,7 @@ class DatabaseService {
   }
 
   static const String _createHrvTable = '''
-    CREATE TABLE IF NOT EXISTS hrv_results (
+    CREATE TABLE IF NOT EXISTS $HRV_TABLE_NAME (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       session_id    TEXT    NOT NULL,
       timestamp     TEXT    NOT NULL,
