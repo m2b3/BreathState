@@ -386,7 +386,7 @@ class HrvTimeDomain {
       List<double> rri, double windowMs) {
     final cum = _cumulativeMs(rri);
     final totalMs = cum.last;
-    final nWindows = (totalMs / windowMs).round();
+    final nWindows = (totalMs / windowMs).floor();
     if (nWindows < 3) return [];
 
     final segments = <List<double>>[];
