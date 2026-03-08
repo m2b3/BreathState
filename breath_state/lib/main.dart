@@ -41,8 +41,8 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   final List<Widget> screens = const [
     HomeScreen(),
-    GuidedBreathingScreen(),
     RecordScreen(),
+    GuidedBreathingScreen(),
     SettingsScreen(),
   ];
 

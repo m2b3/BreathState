@@ -11,11 +11,14 @@ class AppTheme {
   static const Color roseAccent = Color(0xFFE11D48);   
   static const Color coralRose = Color(0xFFF43F5E);    
   static const Color calmBlue = Color(0xFF38BDF8);    
+  
+  static const Color darkTeal = Color(0xFF0F766E);
+  static const Color darkRose = Color(0xFFBE123C);
 
   static const Color textLight = Color(0xFFF8FAFC);    
-  static const Color textDark = Color(0xFF0F172A);    
+  static const Color textDark = Color(0xFF050505); 
   static const Color textDimLight = Color(0xFF94A3B8); 
-  static const Color textDimDark = Color(0xFF475569); 
+  static const Color textDimDark = Color(0xFF1E293B); 
 
   static const LinearGradient darkBackgroundGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -166,11 +169,11 @@ class AppTheme {
     return ThemeData(
       brightness: Brightness.light,
       scaffoldBackgroundColor: paleTeal,
-      primaryColor: softTeal,
+      primaryColor: darkTeal,
       colorScheme: const ColorScheme.light(
-        primary: softTeal,
+        primary: darkTeal,
         secondary: roseAccent,
-        tertiary: coralRose,
+        tertiary: darkRose,
         surface: pureWhite,
         onSurface: textDark,
         onPrimary: Colors.white,
@@ -224,10 +227,10 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: coralRose,
+          backgroundColor: darkRose,
           foregroundColor: Colors.white,
           elevation: 6,
-          shadowColor: coralRose.withOpacity(0.3),
+          shadowColor: darkRose.withOpacity(0.3),
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),

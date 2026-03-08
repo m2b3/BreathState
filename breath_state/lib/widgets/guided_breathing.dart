@@ -2,11 +2,14 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:breath_state/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 class GuidedBreathing extends StatefulWidget {
   final Duration inhaleDuration;
   final Duration holdDuration;
   final Duration exhaleDuration;
+  final Duration? totalDuration; 
+  final double? resonanceFrequency;
 
   final bool showStopButton;
 
@@ -15,6 +18,8 @@ class GuidedBreathing extends StatefulWidget {
     required this.inhaleDuration,
     required this.holdDuration,
     required this.exhaleDuration,
+    this.totalDuration,
+    this.resonanceFrequency,
     this.showStopButton = true,
   });
 
@@ -41,9 +46,13 @@ class _GuidedBreathingState extends State<GuidedBreathing> {
   int _introSecondsLeft = 5;
   int _phaseSecondsLeft = 0;
 
+  Timer? _totalSessionTimer;
+  int _totalSecondsElapsed = 0;
+
   @override
   void initState() {
     super.initState();
+    WakelockPlus.enable();
     _currentSize = _minSize;
     _startSize = _minSize;
     _endSize = _minSize;
@@ -53,12 +62,43 @@ class _GuidedBreathingState extends State<GuidedBreathing> {
         timer.cancel();
         setState(() => _introSecondsLeft = 0);
         _startCycle();
+        _startTotalSessionTimer();
       } else {
         setState(() => _introSecondsLeft--);
       }
     });
 
     _animationTimer = Timer.periodic(const Duration(milliseconds: 16), _updateAnimation);
+  }
+
+  void _startTotalSessionTimer() {
+    if (widget.totalDuration == null) return;
+    
+    _totalSessionTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      
+      setState(() {
+        _totalSecondsElapsed++;
+      });
+      
+      if (_totalSecondsElapsed >= widget.totalDuration!.inSeconds) {
+        timer.cancel();
+        _endSessionComplete();
+      }
+    });
+  }
+
+  void _endSessionComplete() {
+    if (!mounted) return;
+    
+    _animationTimer?.cancel();
+    _logicTimer?.cancel();
+    _countdownTimer?.cancel();
+    
+    Navigator.of(context).pop();
   }
 
   void _updateAnimation(Timer timer) {
@@ -169,115 +209,231 @@ class _GuidedBreathingState extends State<GuidedBreathing> {
 
   @override
   void dispose() {
+    WakelockPlus.disable();
     _animationTimer?.cancel();
     _logicTimer?.cancel();
     _introTimer?.cancel();
     _countdownTimer?.cancel();
+    _totalSessionTimer?.cancel();
     super.dispose();
+  }
+
+  String _formatTimer() {
+    if (widget.totalDuration == null) return '';
+    final remaining = widget.totalDuration!.inSeconds - _totalSecondsElapsed;
+    final clampedRemaining = remaining < 0 ? 0 : remaining;
+    final m = (clampedRemaining ~/ 60).toString().padLeft(2, '0');
+    final s = (clampedRemaining % 60).toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isResonance = widget.resonanceFrequency != null;
+    final baseColor = isDark ? Colors.white : AppTheme.darkTeal;
+    final dimColor = baseColor.withOpacity(0.6);
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.deepOceanBlue,
-              AppTheme.midnightBlue,
-            ],
-          ),
+        decoration: BoxDecoration(
+          gradient: isDark 
+              ? const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppTheme.deepOceanBlue,
+                    AppTheme.midnightBlue,
+                  ],
+                )
+              : const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppTheme.paleTeal,
+                    Color(0xFFE0F2FE),
+                  ],
+                ),
         ),
         child: SafeArea(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+          child: Stack(
             children: [
-              const Spacer(flex: 2),
-              Center(
-                child: SizedBox(
-                   width: _maxSize + 100,
-                   height: _maxSize + 100,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        width: _maxSize + 60,
-                        height: _maxSize + 60,
+              // Top-right timer pill (only for non-resonance sessions)
+              if (widget.totalDuration != null && !isResonance)
+                Positioned(
+                  top: 16,
+                  right: 24,
+                  child: Builder(
+                    builder: (context) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
+                          color: baseColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: AppTheme.softTeal.withOpacity(0.1),
-                            width: 2,
+                            color: baseColor.withOpacity(0.2),
                           ),
                         ),
-                      ),
-                      
-                      Container(
-                        width: _currentSize,
-                        height: _currentSize,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: RadialGradient(
-                            colors: [
-                              AppTheme.softTeal.withOpacity(0.8),
-                              AppTheme.calmBlue.withOpacity(0.4),
-                            ],
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.softTeal.withOpacity(0.4),
-                              blurRadius: (_currentSize - _minSize) / (_maxSize - _minSize) * 20 + 30,
-                              spreadRadius: (_currentSize - _minSize) / (_maxSize - _minSize) * 10 + 5,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.timer_outlined, 
+                              size: 16, 
+                              color: dimColor,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              _formatTimer(),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: baseColor,
+                                fontFeatures: const [FontFeature.tabularFigures()],
+                              ),
                             ),
                           ],
                         ),
-                        child: Center(
-                          child: _introSecondsLeft > 0
-                              ? const SizedBox.shrink()
-                              : AnimatedOpacity(
-                                  opacity: _phaseSecondsLeft <= 3 ? 0.3 : 1.0, 
-                                   duration: const Duration(milliseconds: 300),
-                                  child: Text(
-                                    '$_phaseSecondsLeft',
-                                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                                      fontSize: 48,
-                                      color: Colors.white,
-                                    ),
-                                  ),
+                      );
+                    }
+                  ),
+                ),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Spacer(flex: 2),
+
+                  // Resonance frequency label above the bubble
+                  if (isResonance)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 20),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.favorite_rounded,
+                            size: 16,
+                            color: AppTheme.roseAccent.withOpacity(0.8),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${widget.resonanceFrequency!.toStringAsFixed(1)} bpm',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: dimColor,
+                              letterSpacing: 0.5,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  Center(
+                    child: SizedBox(
+                      width: _maxSize + 100,
+                      height: _maxSize + 100,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Container(
+                            width: _maxSize + 60,
+                            height: _maxSize + 60,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppTheme.softTeal.withOpacity(0.1),
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            width: _currentSize,
+                            height: _currentSize,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: isDark 
+                                    ? [
+                                        AppTheme.softTeal.withOpacity(0.8),
+                                        AppTheme.calmBlue.withOpacity(0.4),
+                                      ]
+                                    : [
+                                        AppTheme.softTeal.withOpacity(0.85),
+                                        AppTheme.calmBlue.withOpacity(0.45),
+                                      ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isDark 
+                                      ? AppTheme.softTeal.withOpacity(0.4)
+                                      : AppTheme.calmBlue.withOpacity(0.5),
+                                  blurRadius: (_currentSize - _minSize) / (_maxSize - _minSize) * (isDark ? 20 : 30) + (isDark ? 30 : 20),
+                                  spreadRadius: (_currentSize - _minSize) / (_maxSize - _minSize) * (isDark ? 10 : 15) + 5,
                                 ),
+                              ],
+                            ),
+                            child: Center(
+                              child: _introSecondsLeft > 0
+                                  ? const SizedBox.shrink()
+                                  : Text(
+                                      '$_phaseSecondsLeft',
+                                      style: TextStyle(
+                                        fontSize: 48,
+                                        color: baseColor,
+                                        fontWeight: FontWeight.bold,
+                                        height: 1.1,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  Text(
+                    _introSecondsLeft > 0
+                        ? "Relax... $_introSecondsLeft"
+                        : _phaseText,
+                    style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                      color: baseColor,
+                    ),
+                  ),
+
+                  // Elegant inline timer for resonance mode
+                  if (isResonance && widget.totalDuration != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(
+                        _formatTimer(),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                          color: dimColor,
+                          letterSpacing: 1.5,
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 60),
-
-              Text(
-                _introSecondsLeft > 0
-                    ? "Relax... $_introSecondsLeft"
-                    : _phaseText,
-                style: Theme.of(context).textTheme.displayMedium,
-              ),
-
-              const Spacer(flex: 2),
-
-              if (widget.showStopButton)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 40),
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.1),
-                      foregroundColor: Colors.white,
-                      side: BorderSide(color: Colors.white.withOpacity(0.2)),
                     ),
-                    child: const Text("End Session"),
-                  ),
-                ),
+
+                  const Spacer(flex: 2),
+                  if (widget.showStopButton)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 40),
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.maybePop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: baseColor.withOpacity(0.1),
+                          foregroundColor: baseColor,
+                          side: BorderSide(color: baseColor.withOpacity(0.2)),
+                        ),
+                        child: const Text("End Session"),
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
         ),

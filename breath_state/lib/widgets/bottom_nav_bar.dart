@@ -11,14 +11,16 @@ class BottomNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 28), 
-      child: GlassCard(
-        borderRadius: 36,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10), 
-        color: isDark 
-            ? Colors.white.withOpacity(0.08)
-            : Colors.white.withOpacity(0.9),
+    return SafeArea(
+      bottom: true,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 28), 
+        child: GlassCard(
+          borderRadius: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10), 
+          color: isDark 
+              ? Colors.white.withOpacity(0.08)
+              : Colors.white.withOpacity(0.9),
         child: Consumer<NavBarProvider>(
           builder: (context, navBarProvider, child) {
             return Row(
@@ -32,16 +34,16 @@ class BottomNavBar extends StatelessWidget {
                   onTap: () => navBarProvider.changeIndex(0),
                 ),
                 _NavBarItem(
-                  icon: Icons.spa_rounded,
-                  label: "Breath",
+                  icon: Icons.monitor_heart_outlined,
+                  activeIcon: Icons.monitor_heart_rounded,
+                  label: "Record",
                   index: 1,
                   currentIndex: navBarProvider.getIndex(),
                   onTap: () => navBarProvider.changeIndex(1),
                 ),
                 _NavBarItem(
-                  icon: Icons.monitor_heart_outlined,
-                  activeIcon: Icons.monitor_heart_rounded,
-                  label: "Record",
+                  icon: Icons.spa_rounded,
+                  label: "Breath",
                   index: 2,
                   currentIndex: navBarProvider.getIndex(),
                   onTap: () => navBarProvider.changeIndex(2),
@@ -59,7 +61,7 @@ class BottomNavBar extends StatelessWidget {
           },
         ),
       ),
-    );
+    ));
   }
 }
 
