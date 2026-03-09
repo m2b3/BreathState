@@ -1,14 +1,20 @@
+import 'dart:async';
 import 'dart:developer' as developer;
+import 'package:breath_state/providers/go_direct_provider.dart';
 import 'package:breath_state/providers/nav_bar_provider.dart';
 import 'package:breath_state/providers/polar_connect_provider.dart';
+import 'package:breath_state/services/breath_rate/belt_breath_rate.dart';
 import 'package:breath_state/services/breath_rate/record.dart';
 import 'package:breath_state/services/heart_rate/polar_connect.dart';
+import 'package:breath_state/services/hrv_analysis/hrv_frequency_domain.dart';
 import 'package:breath_state/services/hrv_analysis/hrv_time_domain.dart';
 import 'package:breath_state/services/resonance_service/res_freq.dart';
 import 'package:breath_state/services/resonance_service/rf_trainer.dart';
 import 'package:breath_state/theme/app_theme.dart';
 import 'package:breath_state/widgets/glass_card.dart';
+import 'package:breath_state/widgets/hrv_frequency_result_card.dart';
 import 'package:breath_state/widgets/hrv_result_card.dart';
+import 'package:breath_state/widgets/respiration_waveform_card.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -28,6 +34,12 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
   bool isRecordingHR = false;
   bool isRecordingBR = false;
   int breathingRate = -2;
+
+  bool _beltActiveForSession = false;
+  String _breathSource = 'Microphone';
+  final List<double> _beltForceValues = [];
+  StreamSubscription<double>? _beltSub;
+  DateTime? _beltStartTime;
 
   @override
   void initState() {
@@ -51,6 +63,28 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
     required bool recordHR,
   }) async {
     WakelockPlus.enable();
+
+    final gdProvider = context.read<GoDirectProvider>();
+    if (gdProvider.isConnected) {
+      try {
+        await gdProvider.startMeasurements(sensorNumbers: [1], periodMs: 100);
+        _beltActiveForSession = true;
+        _breathSource = 'Respiration Belt';
+        _beltForceValues.clear();
+        _beltStartTime = DateTime.now();
+        _beltSub = gdProvider.respirationForceStream.listen((v) {
+          _beltForceValues.add(v);
+        });
+      } catch (e) {
+        developer.log('Belt start failed, falling back to mic: $e');
+        _beltActiveForSession = false;
+        _breathSource = 'Microphone';
+      }
+    } else {
+      _beltActiveForSession = false;
+      _breathSource = 'Microphone';
+    }
+
     if (recordBR) {
       _recorder = SoundRecorder();
       setState(() {
@@ -61,9 +95,39 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
       _recorder!.startRecord().then((rate) {
         if (mounted) {
           setState(() {
-            breathingRate = rate;
+            if (_beltActiveForSession && _beltForceValues.length >= 30) {
+              final result = estimateBreathRateFromForce(
+                _beltForceValues,
+                sampleRateHz: 10.0,
+              );
+              breathingRate = result.bpm.round();
+            } else {
+              breathingRate = rate;
+              _breathSource = 'Microphone';
+            }
             isRecordingBR = false;
           });
+          _stopBelt();
+          _checkStopEffect();
+        }
+      });
+    } else if (_beltActiveForSession) {
+      setState(() {
+        breathingRate = -1;
+        isRecordingBR = true;
+      });
+      _pulseController.repeat(reverse: true);
+      Future.delayed(const Duration(seconds: 30), () {
+        if (mounted && _beltActiveForSession) {
+          final result = estimateBreathRateFromForce(
+            _beltForceValues,
+            sampleRateHz: 10.0,
+          );
+          setState(() {
+            breathingRate = result.bpm.round();
+            isRecordingBR = false;
+          });
+          _stopBelt();
           _checkStopEffect();
         }
       });
@@ -94,11 +158,23 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
     }
   }
 
+  Future<void> _stopBelt() async {
+    _beltSub?.cancel();
+    _beltSub = null;
+    final gdProvider = context.read<GoDirectProvider>();
+    if (gdProvider.isStreaming) {
+      await gdProvider.stopMeasurements();
+    }
+    _beltActiveForSession = false;
+  }
+
   Future<void> _stopHRRecording() async {
     final polarConnectProvider = context.read<PolarConnectProvider>();
     PolarConnect? polar = polarConnectProvider.getPolarConnect();
     if (polar != null) {
       try {
+        final rrIntervals = List<double>.from(polar.sessionRrIntervals);
+
         await polar.stopRecording();
         final hrvResult = polar.lastSessionHrv;
         setState(() {
@@ -109,7 +185,14 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
         _checkStopEffect();
 
         if (hrvResult != null && mounted) {
-          _showHrvResultSheet(hrvResult);
+          HrvFrequencyDomainResult? freqResult;
+          try {
+            freqResult = HrvFrequencyDomainAnalyzer.analyze(rrIntervals);
+          } catch (e) {
+            debugPrint('Frequency-domain HRV skipped: $e');
+          }
+
+          _showHrvResultSheet(hrvResult, freqResult);
         }
       } catch (e) {
         developer.log("Error stopping HR recording: $e");
@@ -121,7 +204,10 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
     _checkStopEffect();
   }
 
-  void _showHrvResultSheet(HrvTimeDomainResult result) {
+  void _showHrvResultSheet(
+    HrvTimeDomainResult result, [
+    HrvFrequencyDomainResult? freqResult,
+  ]) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
@@ -158,6 +244,10 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
                 ),
                 const SizedBox(height: 16),
                 HrvResultCard(result: result),
+                if (freqResult != null) ...[
+                  const SizedBox(height: 16),
+                  HrvFrequencyResultCard(result: freqResult),
+                ],
               ],
             ),
           ),
@@ -201,83 +291,85 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
     );
   }
 
-  void _showRecordDialog() {
-    bool recordBR = false;
-    bool recordHR = false;
+  void _handleStartRecording() {
+    final gdProvider = context.read<GoDirectProvider>();
+    final isBeltConnected = gdProvider.isConnected;
 
+    if (isBeltConnected) {
+      _startRecording(recordBR: true, recordHR: true);
+    } else {
+      _showMicFallbackCaution();
+    }
+  }
+
+  void _showMicFallbackCaution() {
     showDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-              return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-              title: Text("Select what to record", style: Theme.of(context).textTheme.titleLarge),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        icon: Icon(
+          Icons.warning_amber_rounded,
+          color: Colors.amber.shade600,
+          size: 48,
+        ),
+        title: Text(
+          "Respiration Belt Not Connected",
+          style: Theme.of(context).textTheme.titleLarge,
+          textAlign: TextAlign.center,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              "Breathing rate will be measured using the microphone, which may be less accurate.",
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.softTeal.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppTheme.softTeal.withOpacity(0.3),
+                ),
+              ),
+              child: Row(
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark 
-                          ? Colors.white.withOpacity(0.05) 
-                          : AppTheme.softTeal.withOpacity(0.08), 
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Theme.of(context).dividerColor.withOpacity(0.1),
-                      ),
-                    ),
-                    child: CheckboxListTile(
-                      title: Text("Breath Rate", style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
-                      subtitle: Text("Using Microphone", style: Theme.of(context).textTheme.bodySmall),
-                      value: recordBR,
-                      activeColor: AppTheme.softTeal,
-                      checkColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      onChanged: (val) => setStateDialog(() => recordBR = val ?? false),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark 
-                          ? Colors.white.withOpacity(0.05) 
-                          : AppTheme.roseAccent.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                         color: Theme.of(context).dividerColor.withOpacity(0.1),
-                      ),
-                    ),
-                    child: CheckboxListTile(
-                      title: Text("Heart Rate", style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
-                      subtitle: Text("Using Polar Device", style: Theme.of(context).textTheme.bodySmall),
-                      value: recordHR,
-                      activeColor: AppTheme.roseAccent,
-                      checkColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      onChanged: (val) => setStateDialog(() => recordHR = val ?? false),
+                  Icon(Icons.air_rounded, color: AppTheme.softTeal, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      "Connect a Vernier Go Direct Respiration Belt for better accuracy.",
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppTheme.softTeal,
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                   ),
                 ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text("Cancel", style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color)),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    if (recordBR || recordHR) {
-                      _startRecording(recordBR: recordBR, recordHR: recordHR);
-                    }
-                  },
-                  child: const Text("Start Recording"),
-                ),
-              ],
-            );
-          },
-        );
-      },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<NavBarProvider>().changeIndex(3);
+            },
+            child: const Text("Go to Settings"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _startRecording(recordBR: true, recordHR: true);
+            },
+            child: const Text("Continue with Mic"),
+          ),
+        ],
+      ),
     );
   }
 
@@ -322,7 +414,7 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
                         child: GestureDetector(
                           onTap: isActive
                               ? (isRecordingHR ? _stopHRRecording : null)
-                              : _showRecordDialog,
+                              : _handleStartRecording,
                           child: AnimatedBuilder(
                             animation: _pulseController,
                             builder: (context, child) {
@@ -439,7 +531,27 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
                                     ),
                                   const SizedBox(height: 4),
                                   if (isRecordingBR)
-                                     Text("Measuring...", style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color, fontSize: 10)),
+                                     Text("Measuring...", style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color, fontSize: 10))
+                                  else if (breathingRate > 0)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: _breathSource == 'Respiration Belt'
+                                            ? AppTheme.softTeal.withOpacity(0.15)
+                                            : AppTheme.calmBlue.withOpacity(0.15),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        _breathSource == 'Respiration Belt' ? 'Belt ✓' : 'Mic',
+                                        style: TextStyle(
+                                          color: _breathSource == 'Respiration Belt'
+                                              ? AppTheme.softTeal
+                                              : AppTheme.calmBlue,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
@@ -479,7 +591,20 @@ class _RecordScreenState extends State<RecordScreen> with SingleTickerProviderSt
                         ],
                       ),
                       
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 16),
+
+                      Consumer<GoDirectProvider>(
+                        builder: (context, gdProvider, _) {
+                          if (!gdProvider.isStreaming) {
+                            return const SizedBox.shrink();
+                          }
+                          return RespirationWaveformCard(
+                            forceStream: gdProvider.respirationForceStream,
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 8),
                       
                       Consumer<PolarConnectProvider>(
                         builder: (context, provider, child) {
