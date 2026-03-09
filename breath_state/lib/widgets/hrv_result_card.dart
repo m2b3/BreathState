@@ -27,6 +27,16 @@ class _HrvResultCardState extends State<HrvResultCard> {
   }
 
   @override
+  void didUpdateWidget(covariant HrvResultCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.expanded != widget.expanded) {
+      setState(() {
+        _expanded = widget.expanded;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
